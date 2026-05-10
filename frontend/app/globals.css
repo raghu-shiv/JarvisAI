@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 20% 98%;
+  --foreground: 220 18% 12%;
+  --muted: 214 22% 92%;
+  --border: 214 18% 82%;
+  --primary: 172 66% 30%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.prose pre {
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #111827;
+  color: #f9fafb;
+  padding: 1rem;
+}
+
+.prose code {
+  border-radius: 4px;
+  background: #e5e7eb;
+  padding: 0.1rem 0.25rem;
+}
+
+.prose pre code {
+  background: transparent;
+  padding: 0;
+}
