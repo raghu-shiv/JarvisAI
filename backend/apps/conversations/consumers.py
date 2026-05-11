@@ -1,5 +1,6 @@
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.utils import timezone
 
 from apps.ai_providers.providers import get_ai_provider
 from apps.conversations.models import Conversation, Message
@@ -57,12 +58,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _save_message(self, role: str, content: str, status: str) -> Message:
-        return Message.objects.create(
+        message = Message.objects.create(
             conversation_id=self.conversation_id,
             role=role,
             content=content,
             status=status,
         )
+        conversation_updates = {"updated_at": timezone.now()}
+        if role == Message.Role.USER:
+            conversation = Conversation.objects.only("title").get(id=self.conversation_id)
+            if conversation.title == "New conversation":
+                conversation_updates["title"] = content[:60]
+        Conversation.objects.filter(id=self.conversation_id).update(**conversation_updates)
+        return message
 
     @database_sync_to_async
     def _message_history(self) -> list[dict[str, str]]:

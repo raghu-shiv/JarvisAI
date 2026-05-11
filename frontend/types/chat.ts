@@ -16,6 +16,7 @@ export type Conversation = {
   created_at: string;
   updated_at: string;
   archived_at?: string | null;
+  message_count?: number;
   messages?: Message[];
 };
 

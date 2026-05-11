@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bot, LogOut, MessageSquarePlus, Send } from "lucide-react";
+import { Bot, Check, LogOut, MessageSquarePlus, Pencil, Send, Trash2, X } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown-message";
 import { PromptPanel } from "@/components/prompt-panel";
 import { apiFetch } from "@/lib/api";
@@ -14,6 +14,8 @@ export default function ChatPage() {
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
 
   const socket = useMemo(() => {
@@ -33,7 +35,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!activeConversation) return;
-    setMessages(activeConversation.messages ?? []);
+    void loadMessages(activeConversation.id);
   }, [activeConversation]);
 
   useEffect(() => {
@@ -64,6 +66,17 @@ export default function ChatPage() {
     setActiveConversation(data[0] ?? null);
   }
 
+  async function loadMessages(conversationId: string) {
+    const data = await apiFetch<Message[]>(`/conversations/${conversationId}/messages/`);
+    setMessages(data);
+  }
+
+  function selectConversation(conversation: Conversation) {
+    if (isStreaming) return;
+    setActiveConversation(conversation);
+    setEditingConversationId(null);
+  }
+
   async function createConversation() {
     const conversation = await apiFetch<Conversation>("/conversations/", {
       method: "POST",
@@ -73,9 +86,41 @@ export default function ChatPage() {
     setActiveConversation(conversation);
   }
 
+  function startRename(conversation: Conversation) {
+    setEditingConversationId(conversation.id);
+    setEditingTitle(conversation.title);
+  }
+
+  async function saveRename(conversation: Conversation) {
+    const title = editingTitle.trim();
+    if (!title) return;
+    const updated = await apiFetch<Conversation>(`/conversations/${conversation.id}/`, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    });
+    setConversations((current) => current.map((item) => (item.id === updated.id ? { ...item, title: updated.title } : item)));
+    if (activeConversation?.id === updated.id) {
+      setActiveConversation((current) => (current ? { ...current, title: updated.title } : current));
+    }
+    setEditingConversationId(null);
+  }
+
+  async function deleteConversation(conversation: Conversation) {
+    const confirmed = window.confirm(`Delete "${conversation.title}"?`);
+    if (!confirmed) return;
+
+    await apiFetch<void>(`/conversations/${conversation.id}/`, { method: "DELETE" });
+    const remaining = conversations.filter((item) => item.id !== conversation.id);
+    setConversations(remaining);
+    if (activeConversation?.id === conversation.id) {
+      setActiveConversation(remaining[0] ?? null);
+      setMessages([]);
+    }
+  }
+
   function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.trim() || !socket || isStreaming) return;
+    if (!draft.trim() || !socket || !activeConversation || isStreaming) return;
 
     const message: Message = {
       id: crypto.randomUUID(),
@@ -85,6 +130,11 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
     };
     setMessages((current) => [...current, message]);
+    if (activeConversation.title === "New conversation") {
+      const title = message.content.slice(0, 60);
+      setActiveConversation({ ...activeConversation, title });
+      setConversations((current) => current.map((conversation) => (conversation.id === activeConversation.id ? { ...conversation, title } : conversation)));
+    }
     socket.send(JSON.stringify({ type: "user.message", content: draft.trim() }));
     setDraft("");
   }
@@ -114,13 +164,43 @@ export default function ChatPage() {
         </div>
         <nav className="space-y-1 px-3">
           {conversations.map((conversation) => (
-            <button
+            <div
               key={conversation.id}
-              className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${conversation.id === activeConversation?.id ? "bg-muted font-medium" : "hover:bg-muted"}`}
-              onClick={() => setActiveConversation(conversation)}
+              className={`group flex min-h-10 items-center gap-1 rounded-md px-2 text-sm ${conversation.id === activeConversation?.id ? "bg-muted font-medium" : "hover:bg-muted"}`}
             >
-              {conversation.title}
-            </button>
+              {editingConversationId === conversation.id ? (
+                <>
+                  <input
+                    className="min-w-0 flex-1 rounded border border-border bg-white px-2 py-1 text-sm font-normal outline-none"
+                    value={editingTitle}
+                    onChange={(event) => setEditingTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void saveRename(conversation);
+                      if (event.key === "Escape") setEditingConversationId(null);
+                    }}
+                    autoFocus
+                  />
+                  <button className="rounded p-1 hover:bg-white" onClick={() => void saveRename(conversation)} aria-label="Save conversation title">
+                    <Check size={15} />
+                  </button>
+                  <button className="rounded p-1 hover:bg-white" onClick={() => setEditingConversationId(null)} aria-label="Cancel rename">
+                    <X size={15} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="min-w-0 flex-1 truncate py-2 text-left" onClick={() => selectConversation(conversation)}>
+                    {conversation.title}
+                  </button>
+                  <button className="rounded p-1 opacity-0 hover:bg-white group-hover:opacity-100" onClick={() => startRename(conversation)} aria-label="Rename conversation">
+                    <Pencil size={14} />
+                  </button>
+                  <button className="rounded p-1 opacity-0 hover:bg-white group-hover:opacity-100" onClick={() => void deleteConversation(conversation)} aria-label="Delete conversation">
+                    <Trash2 size={14} />
+                  </button>
+                </>
+              )}
+            </div>
           ))}
         </nav>
       </aside>
