@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Bot } from "lucide-react";
 import { login } from "@/lib/auth";
 
@@ -46,6 +47,12 @@ export default function LoginPage() {
         <button className="w-full rounded-md bg-primary px-4 py-2 font-medium text-white" type="submit">
           Sign in
         </button>
+        <p className="mt-4 text-center text-sm text-slate-500">
+          New to JarvisAI?{" "}
+          <Link className="font-medium text-teal-700" href="/register">
+            Create an account
+          </Link>
+        </p>
       </form>
     </main>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { register } from "@/lib/auth";
 
 export default function RegisterPage() {
@@ -16,7 +17,7 @@ export default function RegisterPage() {
     setError("");
     try {
       await register({ username, email, password });
-      router.push("/login");
+      router.push("/chat");
     } catch {
       setError("Could not create account.");
     }
@@ -43,6 +44,12 @@ export default function RegisterPage() {
         <button className="w-full rounded-md bg-primary px-4 py-2 font-medium text-white" type="submit">
           Create account
         </button>
+        <p className="mt-4 text-center text-sm text-slate-500">
+          Already have an account?{" "}
+          <Link className="font-medium text-teal-700" href="/login">
+            Sign in
+          </Link>
+        </p>
       </form>
     </main>
   );

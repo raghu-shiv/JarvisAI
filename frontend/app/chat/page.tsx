@@ -5,7 +5,7 @@ import { Bot, LogOut, MessageSquarePlus, Send } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown-message";
 import { PromptPanel } from "@/components/prompt-panel";
 import { apiFetch } from "@/lib/api";
-import { clearTokens, getAccessToken } from "@/lib/auth";
+import { getAccessToken, logout as logoutSession } from "@/lib/auth";
 import { createChatSocket } from "@/lib/websocket";
 import type { Conversation, Message } from "@/types/chat";
 
@@ -89,8 +89,8 @@ export default function ChatPage() {
     setDraft("");
   }
 
-  function logout() {
-    clearTokens();
+  async function logout() {
+    await logoutSession();
     window.location.href = "/login";
   }
 
