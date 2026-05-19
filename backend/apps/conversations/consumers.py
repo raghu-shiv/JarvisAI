@@ -20,6 +20,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         await self.accept()
+        await self.send_json({"type": "connection.ready"})
 
     async def receive_json(self, content, **kwargs):
         event_type = content.get("type")
@@ -47,7 +48,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
             final_content = "".join(chunks)
             await self._complete_message(assistant.id, final_content)
-            await self.send_json({"type": "assistant.completed", "message_id": str(assistant.id)})
+            await self.send_json({"type": "assistant.completed", "message_id": str(assistant.id), "content": final_content})
         except Exception as exc:
             await self._fail_message(assistant.id, str(exc))
             await self.send_json({"type": "assistant.failed", "message_id": str(assistant.id), "error": str(exc)})

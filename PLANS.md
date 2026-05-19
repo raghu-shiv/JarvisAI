@@ -15,22 +15,22 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added lightweight conversation lists, detail message loading, rename, soft-delete archive behavior, WebSocket persistence, and auto-title behavior.
 - Chat UI and message-history UX polish
   - Added clearer empty states, conversation search, loading/error states, message status labels, assistant copy action, and retry draft preparation.
+- Streaming UX polish
+  - Added WebSocket connection lifecycle feedback, safer send availability, stream error messaging, and assistant completion finalization.
 
 ## Current Phase
 
-Step 5: streaming UX polish.
+Step 6: prompt management.
 
 Target outcomes:
 
-- Improve WebSocket connection lifecycle feedback.
-- Add clearer failed-response recovery behavior.
-- Prevent awkward send states while the socket is connecting or closed.
-- Add better assistant response finalization behavior after streaming completes.
+- Build prompt template CRUD UI.
+- Add prompt template loading and error states.
+- Add a workflow for applying a prompt template to a conversation.
+- Keep backend prompt ownership rules scoped to the authenticated user.
 
 ## Upcoming Phases
 
-- Prompt management
-  - Build prompt template CRUD UI and apply-template workflow.
 - Redis caching and limits
   - Harden conversation/prompt caching and add simple rate-limit foundations.
 - OpenAI provider hardening

@@ -21,6 +21,8 @@ Implemented:
 - Conversation search/filter
 - Conversation and message loading/error states
 - WebSocket response streaming with a mock AI provider
+- WebSocket connection lifecycle feedback
+- Safer send states while streams connect, run, or fail
 - Message status labels and assistant copy action
 - Markdown rendering for messages
 

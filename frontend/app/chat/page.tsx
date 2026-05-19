@@ -9,6 +9,8 @@ import { getAccessToken, logout as logoutSession } from "@/lib/auth";
 import { createChatSocket } from "@/lib/websocket";
 import type { Conversation, Message } from "@/types/chat";
 
+type SocketStatus = "idle" | "connecting" | "ready" | "closed" | "error";
+
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
@@ -23,15 +25,28 @@ export default function ChatPage() {
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
+  const [streamError, setStreamError] = useState("");
 
   const filteredConversations = conversations.filter((conversation) => conversation.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+  const connectionLabel =
+    socketStatus === "ready"
+      ? "Connected"
+      : socketStatus === "connecting"
+        ? "Connecting"
+        : socketStatus === "error"
+          ? "Connection error"
+          : socketStatus === "closed"
+            ? "Disconnected"
+            : "Idle";
 
   const socket = useMemo(() => {
-    if (!activeConversation) return null;
+    if (!activeConversation?.id) return null;
     const token = getAccessToken();
     if (!token) return null;
     return createChatSocket(activeConversation.id, token);
-  }, [activeConversation]);
+  }, [activeConversation?.id]);
+  const canSendMessage = Boolean(activeConversation && socket && socketStatus === "ready" && !isStreaming && !isLoadingMessages && draft.trim());
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -47,12 +62,22 @@ export default function ChatPage() {
   }, [activeConversation]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      setSocketStatus(activeConversation ? "connecting" : "idle");
+      return;
+    }
+
+    setSocketStatus("connecting");
+    setStreamError("");
 
     socket.onmessage = (event) => {
       const payload = JSON.parse(event.data);
+      if (payload.type === "connection.ready") {
+        setSocketStatus("ready");
+      }
       if (payload.type === "assistant.started") {
         setIsStreaming(true);
+        setStreamError("");
         setMessages((current) => [...current, { id: payload.message_id, role: "assistant", content: "", status: "streaming", created_at: new Date().toISOString() }]);
       }
       if (payload.type === "assistant.delta") {
@@ -60,20 +85,44 @@ export default function ChatPage() {
           current.map((message) => (message.id === payload.message_id ? { ...message, content: message.content + payload.delta } : message)),
         );
       }
-      if (payload.type === "assistant.completed" || payload.type === "assistant.failed") {
+      if (payload.type === "assistant.completed") {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === payload.message_id ? { ...message, content: payload.content ?? message.content, status: "completed", error: "" } : message,
+          ),
+        );
         setIsStreaming(false);
       }
       if (payload.type === "assistant.failed") {
+        setIsStreaming(false);
+        setStreamError(payload.error || "The assistant response failed.");
         setMessages((current) =>
           current.map((message) =>
             message.id === payload.message_id ? { ...message, status: "failed", error: payload.error || "The assistant response failed." } : message,
           ),
         );
       }
+      if (payload.type === "error") {
+        setStreamError(payload.error || "The chat stream returned an error.");
+      }
     };
 
-    return () => socket.close();
-  }, [socket]);
+    socket.onerror = () => {
+      setSocketStatus("error");
+      setStreamError("The chat connection failed.");
+      setIsStreaming(false);
+    };
+
+    socket.onclose = () => {
+      setSocketStatus((current) => (current === "error" ? "error" : "closed"));
+      setIsStreaming(false);
+    };
+
+    return () => {
+      socket.onclose = null;
+      socket.close();
+    };
+  }, [activeConversation?.id, socket]);
 
   async function loadConversations() {
     setIsLoadingConversations(true);
@@ -107,6 +156,7 @@ export default function ChatPage() {
     if (isStreaming) return;
     setActiveConversation(conversation);
     setEditingConversationId(null);
+    setStreamError("");
   }
 
   async function createConversation() {
@@ -167,7 +217,7 @@ export default function ChatPage() {
 
   function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.trim() || !socket || !activeConversation || isStreaming) return;
+    if (!canSendMessage || !socket || !activeConversation) return;
 
     const message: Message = {
       id: crypto.randomUUID(),
@@ -176,6 +226,7 @@ export default function ChatPage() {
       status: "completed",
       created_at: new Date().toISOString(),
     };
+    setStreamError("");
     setMessages((current) => [...current, message]);
     if (activeConversation.title === "New conversation") {
       const title = message.content.slice(0, 60);
@@ -294,10 +345,26 @@ export default function ChatPage() {
       <section className="flex min-w-0 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border bg-white px-5">
           <h1 className="truncate text-base font-semibold">{activeConversation?.title ?? "No conversation selected"}</h1>
-          <span className="rounded-md border border-border px-2 py-1 text-xs text-slate-600">Mock provider</span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-md border px-2 py-1 text-xs ${
+                socketStatus === "ready"
+                  ? "border-teal-200 bg-teal-50 text-teal-700"
+                  : socketStatus === "error"
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-border text-slate-600"
+              }`}
+            >
+              {connectionLabel}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1 text-xs text-slate-600">Mock provider</span>
+          </div>
         </header>
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="mx-auto flex max-w-3xl flex-col gap-4">
+            {streamError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{streamError}</div>
+            ) : null}
             {!activeConversation ? (
               <div className="rounded-lg border border-dashed border-border bg-white p-8 text-center text-slate-500">
                 Start a new conversation or select one from the sidebar.
@@ -353,10 +420,11 @@ export default function ChatPage() {
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Message JarvisAI"
             />
-            <button className="grid h-12 w-12 place-items-center rounded-md bg-primary text-white disabled:opacity-50" disabled={!activeConversation || isStreaming || isLoadingMessages} aria-label="Send message">
-              <Send size={18} />
+            <button className="grid h-12 w-12 place-items-center rounded-md bg-primary text-white disabled:opacity-50" disabled={!canSendMessage} aria-label="Send message">
+              {isStreaming ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
             </button>
           </div>
+          {activeConversation && socketStatus !== "ready" ? <p className="mx-auto mt-2 max-w-3xl text-xs text-slate-500">{connectionLabel}. Sending is available when connected.</p> : null}
         </form>
       </section>
 
