@@ -17,22 +17,22 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added clearer empty states, conversation search, loading/error states, message status labels, assistant copy action, and retry draft preparation.
 - Streaming UX polish
   - Added WebSocket connection lifecycle feedback, safer send availability, stream error messaging, and assistant completion finalization.
+- Prompt management
+  - Added authenticated prompt template CRUD UI, prompt validation, prompt loading/error states, and apply-to-conversation workflow.
 
 ## Current Phase
 
-Step 6: prompt management.
+Step 7: Redis caching and limits.
 
 Target outcomes:
 
-- Build prompt template CRUD UI.
-- Add prompt template loading and error states.
-- Add a workflow for applying a prompt template to a conversation.
-- Keep backend prompt ownership rules scoped to the authenticated user.
+- Harden conversation and prompt caching behavior.
+- Add simple per-user chat request throttling foundations.
+- Keep Redis usage explicit and observable in the codebase.
+- Avoid caching sensitive message contents unless there is a clear need.
 
 ## Upcoming Phases
 
-- Redis caching and limits
-  - Harden conversation/prompt caching and add simple rate-limit foundations.
 - OpenAI provider hardening
   - Improve provider settings, model configuration, error handling, and local mock parity.
 - Tests

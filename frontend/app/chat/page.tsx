@@ -428,7 +428,14 @@ export default function ChatPage() {
         </form>
       </section>
 
-      <PromptPanel />
+      <PromptPanel
+        activeConversationId={activeConversation?.id}
+        onPromptApplied={(message) => {
+          if (activeConversation) {
+            setMessages((current) => [...current, message]);
+          }
+        }}
+      />
     </main>
   );
 }

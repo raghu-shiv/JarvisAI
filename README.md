@@ -25,6 +25,8 @@ Implemented:
 - Safer send states while streams connect, run, or fail
 - Message status labels and assistant copy action
 - Markdown rendering for messages
+- Prompt template CRUD
+- Apply prompt template to a conversation as a system message
 
 Planned:
 

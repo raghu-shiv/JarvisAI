@@ -1,10 +1,11 @@
 from django.core.cache import cache
 from django.db.models import Count
 from django.utils import timezone
-from rest_framework import decorators, response, viewsets
+from rest_framework import decorators, response, status, viewsets
 
-from apps.conversations.models import Conversation
-from apps.conversations.serializers import ConversationDetailSerializer, ConversationListSerializer, MessageSerializer
+from apps.conversations.models import Conversation, Message
+from apps.conversations.serializers import ApplyPromptSerializer, ConversationDetailSerializer, ConversationListSerializer, MessageSerializer
+from apps.prompts.models import PromptTemplate
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -41,3 +42,19 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = self.get_object()
         serializer = MessageSerializer(conversation.messages.all(), many=True)
         return response.Response(serializer.data)
+
+    @decorators.action(detail=True, methods=["post"])
+    def apply_prompt(self, request, pk=None):
+        conversation = self.get_object()
+        serializer = ApplyPromptSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        prompt = PromptTemplate.objects.get(id=serializer.validated_data["prompt_id"], user=request.user)
+        message = Message.objects.create(
+            conversation=conversation,
+            role=Message.Role.SYSTEM,
+            content=prompt.system_prompt,
+            status=Message.Status.COMPLETED,
+        )
+        conversation.updated_at = timezone.now()
+        conversation.save(update_fields=["updated_at"])
+        return response.Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)

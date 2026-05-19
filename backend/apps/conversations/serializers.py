@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.conversations.models import Conversation, Message
+from apps.prompts.models import PromptTemplate
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -33,3 +34,13 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
         if not title:
             raise serializers.ValidationError("Conversation title cannot be empty.")
         return title
+
+
+class ApplyPromptSerializer(serializers.Serializer):
+    prompt_id = serializers.UUIDField()
+
+    def validate_prompt_id(self, value):
+        request = self.context["request"]
+        if not PromptTemplate.objects.filter(id=value, user=request.user).exists():
+            raise serializers.ValidationError("Prompt template was not found.")
+        return value
