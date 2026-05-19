@@ -13,24 +13,22 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added register/login token payloads, refresh rotation, blacklist-backed logout, frontend token refresh, and protected auth flow.
 - Conversation history workflow
   - Added lightweight conversation lists, detail message loading, rename, soft-delete archive behavior, WebSocket persistence, and auto-title behavior.
+- Chat UI and message-history UX polish
+  - Added clearer empty states, conversation search, loading/error states, message status labels, assistant copy action, and retry draft preparation.
 
 ## Current Phase
 
-Step 4: chat UI and message-history UX polish.
+Step 5: streaming UX polish.
 
 Target outcomes:
 
-- Clear empty states for first use, no selected conversation, and empty selected conversation.
-- Conversation search/filter in the sidebar.
-- Loading and error states for conversation and message requests.
-- Better message status display for streaming and failed responses.
-- Copy action for assistant messages.
-- Retry UX placeholder, with backend retry support deferred until the streaming phase if needed.
+- Improve WebSocket connection lifecycle feedback.
+- Add clearer failed-response recovery behavior.
+- Prevent awkward send states while the socket is connecting or closed.
+- Add better assistant response finalization behavior after streaming completes.
 
 ## Upcoming Phases
 
-- Streaming UX polish
-  - Improve stream lifecycle states, failed-response handling, and user feedback.
 - Prompt management
   - Build prompt template CRUD UI and apply-template workflow.
 - Redis caching and limits

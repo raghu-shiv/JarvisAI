@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Check, LogOut, MessageSquarePlus, Pencil, Send, Trash2, X } from "lucide-react";
+import { Bot, Check, Clipboard, Loader2, LogOut, MessageSquarePlus, Pencil, RotateCcw, Search, Send, Trash2, X } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown-message";
 import { PromptPanel } from "@/components/prompt-panel";
 import { apiFetch } from "@/lib/api";
@@ -14,9 +14,17 @@ export default function ChatPage() {
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [conversationError, setConversationError] = useState("");
+  const [messageError, setMessageError] = useState("");
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+
+  const filteredConversations = conversations.filter((conversation) => conversation.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
   const socket = useMemo(() => {
     if (!activeConversation) return null;
@@ -55,20 +63,44 @@ export default function ChatPage() {
       if (payload.type === "assistant.completed" || payload.type === "assistant.failed") {
         setIsStreaming(false);
       }
+      if (payload.type === "assistant.failed") {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === payload.message_id ? { ...message, status: "failed", error: payload.error || "The assistant response failed." } : message,
+          ),
+        );
+      }
     };
 
     return () => socket.close();
   }, [socket]);
 
   async function loadConversations() {
-    const data = await apiFetch<Conversation[]>("/conversations/");
-    setConversations(data);
-    setActiveConversation(data[0] ?? null);
+    setIsLoadingConversations(true);
+    setConversationError("");
+    try {
+      const data = await apiFetch<Conversation[]>("/conversations/");
+      setConversations(data);
+      setActiveConversation(data[0] ?? null);
+    } catch {
+      setConversationError("Could not load conversations.");
+    } finally {
+      setIsLoadingConversations(false);
+    }
   }
 
   async function loadMessages(conversationId: string) {
-    const data = await apiFetch<Message[]>(`/conversations/${conversationId}/messages/`);
-    setMessages(data);
+    setIsLoadingMessages(true);
+    setMessageError("");
+    try {
+      const data = await apiFetch<Message[]>(`/conversations/${conversationId}/messages/`);
+      setMessages(data);
+    } catch {
+      setMessageError("Could not load messages.");
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
   }
 
   function selectConversation(conversation: Conversation) {
@@ -78,12 +110,17 @@ export default function ChatPage() {
   }
 
   async function createConversation() {
-    const conversation = await apiFetch<Conversation>("/conversations/", {
-      method: "POST",
-      body: JSON.stringify({ title: "New conversation" }),
-    });
-    setConversations((current) => [conversation, ...current]);
-    setActiveConversation(conversation);
+    setConversationError("");
+    try {
+      const conversation = await apiFetch<Conversation>("/conversations/", {
+        method: "POST",
+        body: JSON.stringify({ title: "New conversation" }),
+      });
+      setConversations((current) => [conversation, ...current]);
+      setActiveConversation(conversation);
+    } catch {
+      setConversationError("Could not create a new conversation.");
+    }
   }
 
   function startRename(conversation: Conversation) {
@@ -94,27 +131,37 @@ export default function ChatPage() {
   async function saveRename(conversation: Conversation) {
     const title = editingTitle.trim();
     if (!title) return;
-    const updated = await apiFetch<Conversation>(`/conversations/${conversation.id}/`, {
-      method: "PATCH",
-      body: JSON.stringify({ title }),
-    });
-    setConversations((current) => current.map((item) => (item.id === updated.id ? { ...item, title: updated.title } : item)));
-    if (activeConversation?.id === updated.id) {
-      setActiveConversation((current) => (current ? { ...current, title: updated.title } : current));
+    setConversationError("");
+    try {
+      const updated = await apiFetch<Conversation>(`/conversations/${conversation.id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ title }),
+      });
+      setConversations((current) => current.map((item) => (item.id === updated.id ? { ...item, title: updated.title } : item)));
+      if (activeConversation?.id === updated.id) {
+        setActiveConversation((current) => (current ? { ...current, title: updated.title } : current));
+      }
+      setEditingConversationId(null);
+    } catch {
+      setConversationError("Could not rename the conversation.");
     }
-    setEditingConversationId(null);
   }
 
   async function deleteConversation(conversation: Conversation) {
     const confirmed = window.confirm(`Delete "${conversation.title}"?`);
     if (!confirmed) return;
 
-    await apiFetch<void>(`/conversations/${conversation.id}/`, { method: "DELETE" });
-    const remaining = conversations.filter((item) => item.id !== conversation.id);
-    setConversations(remaining);
-    if (activeConversation?.id === conversation.id) {
-      setActiveConversation(remaining[0] ?? null);
-      setMessages([]);
+    setConversationError("");
+    try {
+      await apiFetch<void>(`/conversations/${conversation.id}/`, { method: "DELETE" });
+      const remaining = conversations.filter((item) => item.id !== conversation.id);
+      setConversations(remaining);
+      if (activeConversation?.id === conversation.id) {
+        setActiveConversation(remaining[0] ?? null);
+        setMessages([]);
+      }
+    } catch {
+      setConversationError("Could not delete the conversation.");
     }
   }
 
@@ -137,6 +184,19 @@ export default function ChatPage() {
     }
     socket.send(JSON.stringify({ type: "user.message", content: draft.trim() }));
     setDraft("");
+  }
+
+  async function copyMessage(message: Message) {
+    await navigator.clipboard.writeText(message.content);
+    setCopiedMessageId(message.id);
+    window.setTimeout(() => setCopiedMessageId(null), 1500);
+  }
+
+  function prepareRetry(messageIndex: number) {
+    const previousUserMessage = [...messages.slice(0, messageIndex)].reverse().find((message) => message.role === "user");
+    if (previousUserMessage) {
+      setDraft(previousUserMessage.content);
+    }
   }
 
   async function logout() {
@@ -162,8 +222,34 @@ export default function ChatPage() {
             New chat
           </button>
         </div>
+        <div className="px-3 pb-3">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <input
+              className="h-9 w-full rounded-md border border-border bg-white pl-8 pr-2 text-sm outline-none focus:ring-2 focus:ring-teal-700"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search conversations"
+            />
+          </label>
+        </div>
+        {conversationError ? (
+          <div className="mx-3 mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{conversationError}</div>
+        ) : null}
         <nav className="space-y-1 px-3">
-          {conversations.map((conversation) => (
+          {isLoadingConversations ? (
+            <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-500">
+              <Loader2 className="animate-spin" size={15} />
+              Loading conversations
+            </div>
+          ) : null}
+          {!isLoadingConversations && conversations.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-slate-500">No conversations yet.</div>
+          ) : null}
+          {!isLoadingConversations && conversations.length > 0 && filteredConversations.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-slate-500">No matching conversations.</div>
+          ) : null}
+          {filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
               className={`group flex min-h-10 items-center gap-1 rounded-md px-2 text-sm ${conversation.id === activeConversation?.id ? "bg-muted font-medium" : "hover:bg-muted"}`}
@@ -212,15 +298,48 @@ export default function ChatPage() {
         </header>
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="mx-auto flex max-w-3xl flex-col gap-4">
-            {messages.length === 0 ? (
+            {!activeConversation ? (
               <div className="rounded-lg border border-dashed border-border bg-white p-8 text-center text-slate-500">
-                Create or select a conversation, then ask JarvisAI to draft, debug, summarize, or reason through work.
+                Start a new conversation or select one from the sidebar.
               </div>
+            ) : isLoadingMessages ? (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-white p-8 text-slate-500">
+                <Loader2 className="animate-spin" size={18} />
+                Loading messages
+              </div>
+            ) : messageError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700">
+                <p className="mb-3">{messageError}</p>
+                <button className="rounded-md bg-white px-3 py-2 text-sm font-medium text-red-700" onClick={() => void loadMessages(activeConversation.id)}>
+                  Try again
+                </button>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-white p-8 text-center text-slate-500">This conversation is empty.</div>
             ) : (
-              messages.map((message) => (
+              messages.map((message, index) => (
                 <article key={message.id} className={`rounded-lg border border-border bg-white p-4 ${message.role === "user" ? "ml-12" : "mr-12"}`}>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{message.role}</div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <span>{message.role}</span>
+                      {message.status === "streaming" ? <span className="rounded bg-teal-50 px-2 py-0.5 text-teal-700">Streaming</span> : null}
+                      {message.status === "failed" ? <span className="rounded bg-red-50 px-2 py-0.5 text-red-700">Failed</span> : null}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {message.role === "assistant" ? (
+                        <button className="rounded p-1 text-slate-500 hover:bg-muted" onClick={() => void copyMessage(message)} aria-label="Copy message">
+                          {copiedMessageId === message.id ? <Check size={15} /> : <Clipboard size={15} />}
+                        </button>
+                      ) : null}
+                      {message.status === "failed" ? (
+                        <button className="rounded p-1 text-slate-500 hover:bg-muted" onClick={() => prepareRetry(index)} aria-label="Prepare retry">
+                          <RotateCcw size={15} />
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
                   <MarkdownMessage content={message.content} />
+                  {message.error ? <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{message.error}</p> : null}
                 </article>
               ))
             )}
@@ -234,7 +353,7 @@ export default function ChatPage() {
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Message JarvisAI"
             />
-            <button className="grid h-12 w-12 place-items-center rounded-md bg-primary text-white disabled:opacity-50" disabled={!activeConversation || isStreaming} aria-label="Send message">
+            <button className="grid h-12 w-12 place-items-center rounded-md bg-primary text-white disabled:opacity-50" disabled={!activeConversation || isStreaming || isLoadingMessages} aria-label="Send message">
               <Send size={18} />
             </button>
           </div>

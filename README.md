@@ -18,7 +18,10 @@ Implemented:
 - Conversation list/detail APIs
 - Message history loading
 - Conversation rename and archive/delete
+- Conversation search/filter
+- Conversation and message loading/error states
 - WebSocket response streaming with a mock AI provider
+- Message status labels and assistant copy action
 - Markdown rendering for messages
 
 Planned:
