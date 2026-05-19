@@ -1,0 +1,43 @@
+# Project-local Codex configuration notes for JarvisAI.
+# This file is documentation for agent behavior. It must not contain secrets.
+
+project = "JarvisAI"
+root = "JarvisAI"
+
+[access]
+allowed_scope = "inside JarvisAI only"
+outside_scope_requires_permission = true
+
+[ownership]
+user_runs_docker_compose = true
+user_runs_git_and_github_writes = true
+codex_may_edit_project_files = true
+
+[commands]
+codex_must_not_run = [
+  "docker compose",
+  "git commit",
+  "git push",
+  "github write operations"
+]
+
+codex_may_run = [
+  "source inspection",
+  "static search",
+  "npm run build",
+  "python manage.py check",
+  "dry-run checks that do not alter tracked files"
+]
+
+[validation]
+user_run_docker_commands = [
+  "docker compose up --build -d",
+  "docker compose exec backend python manage.py migrate"
+]
+
+user_run_git_commands = [
+  "git status",
+  "git add .",
+  "git commit -m \"message\"",
+  "git push"
+]
