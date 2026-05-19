@@ -105,6 +105,17 @@ export default function ChatPage() {
       if (payload.type === "error") {
         setStreamError(payload.error || "The chat stream returned an error.");
       }
+      if (payload.type === "rate_limited") {
+        setStreamError(payload.error || "You are sending messages too quickly.");
+        setIsStreaming(false);
+        setMessages((current) => {
+          const lastMessage = current[current.length - 1];
+          if (lastMessage?.role === "user") {
+            return current.slice(0, -1);
+          }
+          return current;
+        });
+      }
     };
 
     socket.onerror = () => {

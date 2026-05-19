@@ -1,9 +1,12 @@
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 
 from apps.ai_providers.providers import get_ai_provider
 from apps.conversations.models import Conversation, Message
+from apps.core.cache_keys import chat_rate_limit_key, conversation_list_key
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
@@ -31,6 +34,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         text = (content.get("content") or "").strip()
         if not text:
             await self.send_json({"type": "error", "error": "Message content is required."})
+            return
+
+        if await self._is_rate_limited():
+            await self.send_json(
+                {
+                    "type": "rate_limited",
+                    "error": "You are sending messages too quickly. Please wait before trying again.",
+                    "retry_after_seconds": settings.CHAT_RATE_LIMIT_WINDOW_SECONDS,
+                }
+            )
             return
 
         await self._save_message(role=Message.Role.USER, content=text, status=Message.Status.COMPLETED)
@@ -71,7 +84,23 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             if conversation.title == "New conversation":
                 conversation_updates["title"] = content[:60]
         Conversation.objects.filter(id=self.conversation_id).update(**conversation_updates)
+        cache.delete(conversation_list_key(self.user.id))
         return message
+
+    @database_sync_to_async
+    def _is_rate_limited(self) -> bool:
+        key = chat_rate_limit_key(self.user.id)
+        added = cache.add(key, 1, timeout=settings.CHAT_RATE_LIMIT_WINDOW_SECONDS)
+        if added:
+            return False
+
+        try:
+            request_count = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, timeout=settings.CHAT_RATE_LIMIT_WINDOW_SECONDS)
+            return False
+
+        return request_count > settings.CHAT_RATE_LIMIT_COUNT
 
     @database_sync_to_async
     def _message_history(self) -> list[dict[str, str]]:

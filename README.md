@@ -27,6 +27,8 @@ Implemented:
 - Markdown rendering for messages
 - Prompt template CRUD
 - Apply prompt template to a conversation as a system message
+- Redis-backed conversation and prompt list cache keys
+- Per-user WebSocket chat request throttling
 
 Planned:
 
@@ -80,6 +82,13 @@ AI:
 
 - Mock provider for local development and demos
 - OpenAI provider foundation for real completions
+
+Redis usage:
+
+- Django Channels layer
+- Django cache backend
+- Conversation and prompt ID-list caching
+- Per-user chat request throttling
 
 ## Local Setup
 

@@ -19,22 +19,22 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added WebSocket connection lifecycle feedback, safer send availability, stream error messaging, and assistant completion finalization.
 - Prompt management
   - Added authenticated prompt template CRUD UI, prompt validation, prompt loading/error states, and apply-to-conversation workflow.
+- Redis caching and limits
+  - Added explicit Redis cache keys, cached conversation/prompt ID lists, cache invalidation on mutations, and per-user WebSocket chat throttling.
 
 ## Current Phase
 
-Step 7: Redis caching and limits.
+Step 8: OpenAI provider hardening.
 
 Target outcomes:
 
-- Harden conversation and prompt caching behavior.
-- Add simple per-user chat request throttling foundations.
-- Keep Redis usage explicit and observable in the codebase.
-- Avoid caching sensitive message contents unless there is a clear need.
+- Improve provider settings and model configuration.
+- Add provider-specific error handling.
+- Keep mock provider behavior aligned with the streaming interface.
+- Surface provider/model metadata on persisted assistant messages where practical.
 
 ## Upcoming Phases
 
-- OpenAI provider hardening
-  - Improve provider settings, model configuration, error handling, and local mock parity.
 - Tests
   - Add focused backend API tests and frontend smoke checks.
 - Portfolio polish
