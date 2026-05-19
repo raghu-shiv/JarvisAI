@@ -21,22 +21,22 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added authenticated prompt template CRUD UI, prompt validation, prompt loading/error states, and apply-to-conversation workflow.
 - Redis caching and limits
   - Added explicit Redis cache keys, cached conversation/prompt ID lists, cache invalidation on mutations, and per-user WebSocket chat throttling.
+- OpenAI provider hardening
+  - Added provider metadata, configurable model/temperature/token/timeout settings, sanitized provider errors, mock provider parity, and assistant provider/model persistence.
 
 ## Current Phase
 
-Step 8: OpenAI provider hardening.
+Step 9: tests.
 
 Target outcomes:
 
-- Improve provider settings and model configuration.
-- Add provider-specific error handling.
-- Keep mock provider behavior aligned with the streaming interface.
-- Surface provider/model metadata on persisted assistant messages where practical.
+- Add focused backend API tests for auth, conversations, prompts, and prompt application.
+- Add provider-layer tests for mock provider and OpenAI configuration errors.
+- Add lightweight frontend build/smoke coverage where practical.
+- Keep tests fast and runnable without paid AI keys.
 
 ## Upcoming Phases
 
-- Tests
-  - Add focused backend API tests and frontend smoke checks.
 - Portfolio polish
   - Add screenshots, architecture notes, deployment docs, and a stronger GitHub-facing README.
 

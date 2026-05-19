@@ -78,7 +78,18 @@ export default function ChatPage() {
       if (payload.type === "assistant.started") {
         setIsStreaming(true);
         setStreamError("");
-        setMessages((current) => [...current, { id: payload.message_id, role: "assistant", content: "", status: "streaming", created_at: new Date().toISOString() }]);
+        setMessages((current) => [
+          ...current,
+          {
+            id: payload.message_id,
+            role: "assistant",
+            content: "",
+            status: "streaming",
+            provider: payload.provider,
+            model: payload.model,
+            created_at: new Date().toISOString(),
+          },
+        ]);
       }
       if (payload.type === "assistant.delta") {
         setMessages((current) =>
@@ -400,6 +411,11 @@ export default function ChatPage() {
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       <span>{message.role}</span>
+                      {message.provider || message.model ? (
+                        <span className="rounded bg-slate-100 px-2 py-0.5 normal-case tracking-normal text-slate-600">
+                          {[message.provider, message.model].filter(Boolean).join(" / ")}
+                        </span>
+                      ) : null}
                       {message.status === "streaming" ? <span className="rounded bg-teal-50 px-2 py-0.5 text-teal-700">Streaming</span> : null}
                       {message.status === "failed" ? <span className="rounded bg-red-50 px-2 py-0.5 text-red-700">Failed</span> : null}
                     </div>

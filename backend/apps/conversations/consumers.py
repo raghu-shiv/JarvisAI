@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from apps.ai_providers.providers import get_ai_provider
+from apps.ai_providers.providers import AIProviderError, get_ai_provider
 from apps.conversations.models import Conversation, Message
 from apps.core.cache_keys import chat_rate_limit_key, conversation_list_key
 
@@ -46,14 +46,32 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             )
             return
 
-        await self._save_message(role=Message.Role.USER, content=text, status=Message.Status.COMPLETED)
-        assistant = await self._save_message(role=Message.Role.ASSISTANT, content="", status=Message.Status.STREAMING)
+        try:
+            provider = get_ai_provider()
+        except AIProviderError as exc:
+            await self.send_json({"type": "assistant.failed", "error": exc.message})
+            return
 
-        await self.send_json({"type": "assistant.started", "message_id": str(assistant.id)})
+        await self._save_message(role=Message.Role.USER, content=text, status=Message.Status.COMPLETED)
+        assistant = await self._save_message(
+            role=Message.Role.ASSISTANT,
+            content="",
+            status=Message.Status.STREAMING,
+            provider=provider.provider_name,
+            model=provider.model,
+        )
+
+        await self.send_json(
+            {
+                "type": "assistant.started",
+                "message_id": str(assistant.id),
+                "provider": provider.provider_name,
+                "model": provider.model,
+            }
+        )
 
         chunks: list[str] = []
         try:
-            provider = get_ai_provider()
             history = await self._message_history()
             async for chunk in provider.stream_chat(history):
                 chunks.append(chunk)
@@ -62,21 +80,26 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             final_content = "".join(chunks)
             await self._complete_message(assistant.id, final_content)
             await self.send_json({"type": "assistant.completed", "message_id": str(assistant.id), "content": final_content})
+        except AIProviderError as exc:
+            await self._fail_message(assistant.id, exc.message)
+            await self.send_json({"type": "assistant.failed", "message_id": str(assistant.id), "error": exc.message})
         except Exception as exc:
-            await self._fail_message(assistant.id, str(exc))
-            await self.send_json({"type": "assistant.failed", "message_id": str(assistant.id), "error": str(exc)})
+            await self._fail_message(assistant.id, "The assistant response failed unexpectedly.")
+            await self.send_json({"type": "assistant.failed", "message_id": str(assistant.id), "error": "The assistant response failed unexpectedly."})
 
     @database_sync_to_async
     def _user_owns_conversation(self) -> bool:
         return Conversation.objects.filter(id=self.conversation_id, user=self.user).exists()
 
     @database_sync_to_async
-    def _save_message(self, role: str, content: str, status: str) -> Message:
+    def _save_message(self, role: str, content: str, status: str, provider: str = "", model: str = "") -> Message:
         message = Message.objects.create(
             conversation_id=self.conversation_id,
             role=role,
             content=content,
             status=status,
+            provider=provider,
+            model=model,
         )
         conversation_updates = {"updated_at": timezone.now()}
         if role == Message.Role.USER:
@@ -109,7 +132,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _complete_message(self, message_id, content: str) -> None:
-        Message.objects.filter(id=message_id).update(content=content, status=Message.Status.COMPLETED, error="")
+        Message.objects.filter(id=message_id).update(content=content, status=Message.Status.COMPLETED, error="", token_count=len(content.split()))
 
     @database_sync_to_async
     def _fail_message(self, message_id, error: str) -> None:

@@ -29,6 +29,9 @@ Implemented:
 - Apply prompt template to a conversation as a system message
 - Redis-backed conversation and prompt list cache keys
 - Per-user WebSocket chat request throttling
+- Configurable AI provider settings
+- Assistant message provider/model metadata
+- Sanitized OpenAI provider errors
 
 Planned:
 
@@ -82,6 +85,7 @@ AI:
 
 - Mock provider for local development and demos
 - OpenAI provider foundation for real completions
+- Configurable OpenAI model, temperature, max tokens, and timeout
 
 Redis usage:
 
