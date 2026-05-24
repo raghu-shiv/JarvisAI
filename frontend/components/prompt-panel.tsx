@@ -156,21 +156,26 @@ export function PromptPanel({
   }
 
   return (
-    <aside className="border-l border-border bg-white">
-      <div className="flex h-14 items-center gap-2 border-b border-border px-4 font-semibold">
-        <FileText size={18} />
-        Prompts
+    <aside className="hidden min-h-0 flex-col border-l border-slate-200 bg-white xl:flex">
+      <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-4">
+        <span className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-700">
+          <FileText size={18} />
+        </span>
+        <div>
+          <div className="text-sm font-semibold text-slate-950">Prompt Library</div>
+          <div className="text-xs text-slate-500">{prompts.length} templates</div>
+        </div>
       </div>
 
-      <div className="space-y-4 p-4">
-        {error ? <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
-        {notice ? <div className="rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-700">{notice}</div> : null}
+      <div className="enterprise-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        {error ? <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</div> : null}
+        {notice ? <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">{notice}</div> : null}
 
-        <form className="space-y-3 rounded-lg border border-border p-3" onSubmit={savePrompt}>
+        <form className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 shadow-sm" onSubmit={savePrompt}>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">{editingPromptId ? "Edit prompt" : "New prompt"}</h2>
+            <h2 className="text-sm font-semibold text-slate-950">{editingPromptId ? "Edit prompt" : "New prompt"}</h2>
             {editingPromptId ? (
-              <button className="rounded p-1 text-slate-500 hover:bg-muted" type="button" onClick={resetForm} aria-label="Cancel edit">
+              <button className="rounded p-1 text-slate-500 hover:bg-white hover:text-slate-900" type="button" onClick={resetForm} aria-label="Cancel edit" title="Cancel edit">
                 <X size={15} />
               </button>
             ) : null}
@@ -179,7 +184,7 @@ export function PromptPanel({
           <label className="block text-xs font-medium text-slate-600">
             Name
             <input
-              className="mt-1 h-9 w-full rounded-md border border-border px-2 text-sm outline-none focus:ring-2 focus:ring-teal-700"
+              className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm outline-none placeholder:text-slate-400 focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20"
               value={form.name}
               onChange={(event) => updateForm("name", event.target.value)}
               placeholder="Security reviewer"
@@ -189,7 +194,7 @@ export function PromptPanel({
           <label className="block text-xs font-medium text-slate-600">
             Description
             <input
-              className="mt-1 h-9 w-full rounded-md border border-border px-2 text-sm outline-none focus:ring-2 focus:ring-teal-700"
+              className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm outline-none placeholder:text-slate-400 focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20"
               value={form.description}
               onChange={(event) => updateForm("description", event.target.value)}
               placeholder="Review code for auth and data risks"
@@ -199,14 +204,14 @@ export function PromptPanel({
           <label className="block text-xs font-medium text-slate-600">
             System prompt
             <textarea
-              className="mt-1 min-h-24 w-full resize-none rounded-md border border-border px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-700"
+              className="mt-1 min-h-24 w-full resize-none rounded-md border border-slate-300 bg-white px-2 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-cyan-600 focus:ring-2 focus:ring-cyan-600/20"
               value={form.system_prompt}
               onChange={(event) => updateForm("system_prompt", event.target.value)}
               placeholder="You are a senior security reviewer..."
             />
           </label>
 
-          <button className="flex h-9 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-white disabled:opacity-50" type="submit" disabled={isSaving}>
+          <button className="flex h-9 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-white shadow-sm shadow-cyan-950/15 hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none" type="submit" disabled={isSaving}>
             {isSaving ? <Loader2 className="animate-spin" size={15} /> : editingPromptId ? <Save size={15} /> : <Plus size={15} />}
             {editingPromptId ? "Save prompt" : "Create prompt"}
           </button>
@@ -221,25 +226,25 @@ export function PromptPanel({
           ) : null}
 
           {!isLoading && prompts.length === 0 ? (
-            <p className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-slate-500">Prompt templates will appear here after they are created.</p>
+            <p className="rounded-md border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">Prompt templates will appear here after they are created.</p>
           ) : null}
 
           {prompts.map((prompt) => (
             <div
               key={prompt.id}
-              className={`rounded-lg border p-3 ${prompt.id === selectedPromptId ? "border-teal-300 bg-teal-50/40" : "border-border"}`}
+              className={`rounded-lg border p-3 shadow-sm ${prompt.id === selectedPromptId ? "border-cyan-300 bg-cyan-50/60" : "border-slate-200 bg-white hover:border-slate-300"}`}
             >
               <button className="w-full text-left" type="button" onClick={() => setSelectedPromptId(prompt.id)}>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 truncate font-medium">{prompt.name}</div>
-                  {prompt.id === selectedPromptId ? <Check className="shrink-0 text-teal-700" size={15} /> : null}
+                  <div className="min-w-0 truncate font-medium text-slate-950">{prompt.name}</div>
+                  {prompt.id === selectedPromptId ? <Check className="shrink-0 text-cyan-700" size={15} /> : null}
                 </div>
                 <div className="mt-1 line-clamp-2 text-sm text-slate-500">{prompt.description || prompt.system_prompt}</div>
               </button>
 
               <div className="mt-3 flex gap-2">
                 <button
-                  className="flex flex-1 items-center justify-center gap-2 rounded-md border border-border px-2 py-1.5 text-sm hover:bg-white disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   type="button"
                   onClick={() => void applyPrompt(prompt)}
                   disabled={Boolean(applyingPromptId) || !activeConversationId}
@@ -247,10 +252,10 @@ export function PromptPanel({
                   {applyingPromptId === prompt.id ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
                   Apply
                 </button>
-                <button className="rounded-md border border-border px-2 py-1.5 hover:bg-white" type="button" onClick={() => startEdit(prompt)} aria-label="Edit prompt">
+                <button className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-950" type="button" onClick={() => startEdit(prompt)} aria-label="Edit prompt" title="Edit prompt">
                   <Pencil size={14} />
                 </button>
-                <button className="rounded-md border border-border px-2 py-1.5 hover:bg-white" type="button" onClick={() => void deletePrompt(prompt)} aria-label="Delete prompt">
+                <button className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-slate-600 hover:bg-red-50 hover:text-red-700" type="button" onClick={() => void deletePrompt(prompt)} aria-label="Delete prompt" title="Delete prompt">
                   <Trash2 size={14} />
                 </button>
               </div>

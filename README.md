@@ -28,12 +28,12 @@ Implemented:
 - OpenAI provider foundation with configurable model, temperature, max tokens, and timeout
 - Assistant message provider/model metadata persistence
 - Sanitized AI provider errors
+- Focused backend API and provider tests
+- Local test settings that run without Docker, PostgreSQL, Redis, or paid AI keys
 - Project governance docs in `AGENTS.md`, `PLANS.md`, and `.codex/`
 
 In progress / next:
 
-- Focused backend and provider tests
-- Lightweight frontend smoke coverage
 - Portfolio polish: screenshots, architecture notes, deployment guide, and richer README visuals
 
 ## Architecture
@@ -234,10 +234,13 @@ Source checks:
 cd backend
 python manage.py check
 python manage.py makemigrations --check --dry-run
+python manage.py test --settings=config.test_settings
 
 cd ../frontend
 npm run build
 ```
+
+The test settings module swaps PostgreSQL, Redis cache, and Redis-backed Channels for in-memory local equivalents. This keeps the backend test suite fast and runnable without Docker or paid AI provider credentials.
 
 Useful service checks:
 

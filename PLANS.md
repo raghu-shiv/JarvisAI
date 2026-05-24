@@ -23,22 +23,26 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added explicit Redis cache keys, cached conversation/prompt ID lists, cache invalidation on mutations, and per-user WebSocket chat throttling.
 - OpenAI provider hardening
   - Added provider metadata, configurable model/temperature/token/timeout settings, sanitized provider errors, mock provider parity, and assistant provider/model persistence.
+- Tests
+  - Added Django test settings for local in-memory database/cache/channel layer usage.
+  - Added focused backend tests for auth, prompts, conversations, prompt application, mock provider streaming, and provider configuration errors.
+  - Verified the frontend with a production Next.js build.
 
 ## Current Phase
 
-Step 9: tests.
+Portfolio polish.
 
 Target outcomes:
 
-- Add focused backend API tests for auth, conversations, prompts, and prompt application.
-- Add provider-layer tests for mock provider and OpenAI configuration errors.
-- Add lightweight frontend build/smoke coverage where practical.
-- Keep tests fast and runnable without paid AI keys.
+- Add screenshots, architecture notes, deployment docs, and a stronger GitHub-facing README.
+- Make the repository easier for recruiters and clients to evaluate quickly.
 
 ## Upcoming Phases
 
-- Portfolio polish
-  - Add screenshots, architecture notes, deployment docs, and a stronger GitHub-facing README.
+- Deployment readiness
+  - Document Vercel frontend deployment and AWS/backend deployment options.
+  - Add production environment variable guidance.
+  - Add screenshot assets and architecture visuals for GitHub portfolio presentation.
 
 ## Working Agreement
 
