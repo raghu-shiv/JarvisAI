@@ -33,7 +33,7 @@ class MockProvider(AIProvider):
     async def stream_chat(self, messages: list[dict[str, str]]) -> AsyncIterator[str]:
         last_user_message = next((message["content"] for message in reversed(messages) if message["role"] == "user"), "")
         response = (
-            "Mock Jarvis response. I received your message and would normally stream "
+            "Hello Mr. Stark, this is a mock response generated asynchronously to simulate streaming behavior "
             f"from the configured AI provider. Your last message was: {last_user_message}"
         )
         for token in response.split(" "):

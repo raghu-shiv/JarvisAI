@@ -2,7 +2,31 @@
 
 JarvisAI is an enterprise-style AI chat platform built with Next.js, Django REST Framework, Django Channels, Redis, PostgreSQL, and Docker.
 
-The goal of this repository is to demonstrate production-minded full-stack engineering: authenticated users can manage conversations, stream AI responses over WebSockets, preserve message history, apply reusable prompt templates, and run the full stack locally with Docker Compose.
+This repository is designed as a flagship full-stack project: it demonstrates authenticated AI chat, persisted conversation history, WebSocket streaming, reusable prompt templates, Redis-backed operational behavior, and provider abstraction for mock or OpenAI-backed responses.
+
+The default local mode uses the mock provider, so the full product can be reviewed without paid AI credentials.
+
+## Screenshots
+
+![JarvisAI sign-in screen](docs/assets/screenshots/login.png)
+
+![JarvisAI chat workspace](docs/assets/screenshots/chat-workspace.png)
+
+![JarvisAI assistant response](docs/assets/screenshots/assistant-response.png)
+
+![JarvisAI prompt library](docs/assets/screenshots/prompt-library.png)
+
+![JarvisAI mobile chat view](docs/assets/screenshots/mobile-chat.png)
+
+## Product Highlights
+
+- Secure workspace access with JWT login, refresh, logout, and blacklist support
+- Enterprise chat workspace with conversation history, rename, archive, search, markdown rendering, and copy actions
+- WebSocket streaming through Django Channels with connection status, failed-state handling, provider metadata, and rate limiting
+- Prompt template library with create, edit, delete, and apply-to-conversation workflows
+- Redis-backed caching for conversation and prompt list performance
+- Mock AI provider for demos plus OpenAI provider configuration for real completions
+- Fast local test suite that runs without Docker, PostgreSQL, Redis, or paid AI keys
 
 ## Current Status
 
@@ -34,21 +58,25 @@ Implemented:
 
 In progress / next:
 
-- Portfolio polish: screenshots, architecture notes, deployment guide, and richer README visuals
+- Deployment readiness: production environment guidance, Vercel frontend notes, and AWS/backend deployment options
 
 ## Architecture
 
-```text
-Next.js frontend
-  | REST: auth, conversations, messages, prompts
-  | WebSocket: streaming chat
-  v
-Django + DRF + Channels + Daphne
-  | PostgreSQL: users, conversations, messages, prompts
-  | Redis: Channels layer, cache, rate limits
-  v
-Mock provider / OpenAI provider
+```mermaid
+flowchart LR
+    User["Browser user"] --> Frontend["Next.js App Router frontend"]
+    Frontend -->|REST auth, conversations, prompts| API["Django REST Framework API"]
+    Frontend -->|WebSocket streaming chat| Channels["Django Channels + Daphne"]
+    API --> Postgres["PostgreSQL"]
+    Channels --> Postgres
+    API --> Redis["Redis cache"]
+    Channels --> RedisLayer["Redis channel layer + rate limits"]
+    Channels --> Provider["AI provider layer"]
+    Provider --> Mock["Mock provider"]
+    Provider --> OpenAI["OpenAI provider"]
 ```
+
+More detail is available in [docs/ARCHITECTURE_DEPLOYMENT.md](docs/ARCHITECTURE_DEPLOYMENT.md).
 
 ## Tech Stack
 
@@ -107,6 +135,18 @@ Open:
 - Backend API: http://localhost:8000/api
 
 By default `AI_PROVIDER=mock`, so the app works locally without an OpenAI API key.
+
+## Demo Workflow
+
+After the stack is running:
+
+1. Register a local account or sign in.
+2. Create a conversation from the sidebar.
+3. Create a prompt template in the Prompt Library.
+4. Apply the prompt to the active conversation.
+5. Send a chat message and watch the assistant stream a mock response.
+
+This flow exercises authentication, REST APIs, WebSocket streaming, prompt management, Redis-backed behavior, and persisted message history.
 
 ## Environment Configuration
 
@@ -241,6 +281,13 @@ npm run build
 ```
 
 The test settings module swaps PostgreSQL, Redis cache, and Redis-backed Channels for in-memory local equivalents. This keeps the backend test suite fast and runnable without Docker or paid AI provider credentials.
+
+Portfolio assets:
+
+```text
+docs/assets/screenshots/
+docs/ARCHITECTURE_DEPLOYMENT.md
+```
 
 Useful service checks:
 

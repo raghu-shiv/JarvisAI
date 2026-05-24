@@ -27,22 +27,22 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added Django test settings for local in-memory database/cache/channel layer usage.
   - Added focused backend tests for auth, prompts, conversations, prompt application, mock provider streaming, and provider configuration errors.
   - Verified the frontend with a production Next.js build.
+- Portfolio polish
+  - Added local product screenshots, a README screenshot gallery, product highlights, architecture diagram, and architecture/deployment notes.
 
 ## Current Phase
 
-Portfolio polish.
+Deployment readiness.
 
 Target outcomes:
 
-- Add screenshots, architecture notes, deployment docs, and a stronger GitHub-facing README.
-- Make the repository easier for recruiters and clients to evaluate quickly.
+- Document Vercel frontend deployment and AWS/backend deployment options in more operational detail.
+- Add production environment and release checklist guidance.
 
 ## Upcoming Phases
 
-- Deployment readiness
-  - Document Vercel frontend deployment and AWS/backend deployment options.
-  - Add production environment variable guidance.
-  - Add screenshot assets and architecture visuals for GitHub portfolio presentation.
+- Production hardening
+  - Add stricter security settings, observability notes, CI workflow guidance, and optional end-to-end browser checks.
 
 ## Working Agreement
 
