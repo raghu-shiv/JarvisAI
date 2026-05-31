@@ -54,11 +54,16 @@ Implemented:
 - Sanitized AI provider errors
 - Focused backend API and provider tests
 - Local test settings that run without Docker, PostgreSQL, Redis, or paid AI keys
+- Public database/cache health endpoint for deployment smoke checks
+- Environment-driven production security settings and console logging
+- GitHub Actions CI for backend checks/tests and frontend production builds
 - Project governance docs in `AGENTS.md`, `PLANS.md`, and `.codex/`
 
-In progress / next:
+Deployment guides:
 
-- Deployment readiness: production environment guidance, Vercel frontend notes, and AWS/backend deployment options
+- [Architecture and AWS backend notes](docs/ARCHITECTURE_DEPLOYMENT.md)
+- [Vercel frontend deployment](docs/VERCEL_DEPLOYMENT.md)
+- [Production checklist](docs/PRODUCTION_CHECKLIST.md)
 
 ## Architecture
 
@@ -231,6 +236,12 @@ WebSocket:
 
 ```text
 ws://localhost:8000/ws/chat/:conversation_id/?token=<access_token>
+```
+
+Health:
+
+```text
+GET /api/health/
 ```
 
 Client-to-server chat event:

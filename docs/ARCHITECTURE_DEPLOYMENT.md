@@ -34,11 +34,47 @@ flowchart TD
 Recommended split:
 
 - Frontend: Vercel project built from `frontend`.
-- Backend: AWS container deployment from `backend`, running Daphne/ASGI.
-- Database: managed PostgreSQL.
-- Redis: managed Redis compatible with Django cache and Channels.
+- Backend: AWS App Runner container deployment from `backend`, running Daphne/ASGI.
+- Database: Amazon RDS for PostgreSQL.
+- Redis: Amazon ElastiCache for Redis.
 
 The backend should be deployed before switching the frontend to production API URLs. The frontend needs public `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_WS_BASE_URL` values that point to the deployed backend.
+
+## Vercel Frontend Deployment
+
+Create a Vercel project from this repository with:
+
+```text
+Root Directory: frontend
+Framework Preset: Next.js
+Build Command: npm run build
+Install Command: npm install
+```
+
+Configure:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=https://<backend-host>/api
+NEXT_PUBLIC_WS_BASE_URL=wss://<backend-host>/ws
+```
+
+Redeploy after changing either public URL. Next.js embeds `NEXT_PUBLIC_*` values into the browser bundle at build time.
+
+## AWS Backend Deployment
+
+Recommended first production path:
+
+1. Build the backend image from `backend/Dockerfile`.
+2. Push the image to Amazon ECR.
+3. Create an AWS App Runner service from the ECR image.
+4. Configure the container port as `8000`.
+5. Create RDS PostgreSQL and ElastiCache Redis instances reachable from the backend service.
+6. Add backend environment variables from the checklist below.
+7. Run Django migrations as a one-off task using the same backend image.
+8. Verify `GET https://<backend-host>/api/health/`.
+9. Set the Vercel frontend URLs and redeploy the frontend.
+
+JarvisAI requires a backend host that supports WebSocket upgrades. Validate this before selecting an alternative AWS runtime.
 
 ## Production Environment Checklist
 
@@ -49,6 +85,14 @@ DJANGO_SECRET_KEY=<strong-secret>
 DJANGO_DEBUG=false
 DJANGO_ALLOWED_HOSTS=<backend-host>
 DJANGO_CORS_ALLOWED_ORIGINS=<frontend-origin>
+DJANGO_CSRF_TRUSTED_ORIGINS=<frontend-origin>
+DJANGO_SECURE_SSL_REDIRECT=true
+DJANGO_SESSION_COOKIE_SECURE=true
+DJANGO_CSRF_COOKIE_SECURE=true
+DJANGO_SECURE_HSTS_SECONDS=31536000
+DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=true
+DJANGO_SECURE_HSTS_PRELOAD=true
+DJANGO_LOG_LEVEL=INFO
 POSTGRES_DB=<database-name>
 POSTGRES_USER=<database-user>
 POSTGRES_PASSWORD=<database-password>
@@ -91,6 +135,35 @@ User-owned Docker checks:
 docker compose up --build -d
 docker compose exec backend python manage.py migrate
 ```
+
+Production smoke checks:
+
+```text
+GET  https://<backend-host>/api/health/
+POST https://<backend-host>/api/auth/register/
+POST https://<backend-host>/api/auth/login/
+WS   wss://<backend-host>/ws/chat/<conversation-id>/?token=<access-token>
+```
+
+## Release Checklist
+
+- Set `DJANGO_DEBUG=false`.
+- Replace the development secret with a strong `DJANGO_SECRET_KEY`.
+- Restrict allowed hosts, CORS origins, and CSRF trusted origins to production hosts.
+- Enable HTTPS redirect, secure cookies, and HSTS only after HTTPS is working.
+- Run migrations using the production database configuration.
+- Verify `/api/health/` returns database and cache status as `ok`.
+- Confirm WebSocket streaming through the deployed frontend.
+- Start with `AI_PROVIDER=mock`; switch to `openai` only after secret storage is configured.
+- Keep `OPENAI_API_KEY` in the backend secret store only.
+- Review console logs for errors after the first production session.
+
+## Observability Notes
+
+- The backend emits timestamped console logs controlled by `DJANGO_LOG_LEVEL`.
+- App Runner or the selected container runtime should ship stdout/stderr to CloudWatch.
+- `/api/health/` verifies database and Redis cache connectivity for smoke checks and uptime monitoring.
+- Do not expose secrets, tokens, prompt contents, or full message bodies in logs.
 
 ## Portfolio Review Path
 

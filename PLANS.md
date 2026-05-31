@@ -29,20 +29,24 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Verified the frontend with a production Next.js build.
 - Portfolio polish
   - Added local product screenshots, a README screenshot gallery, product highlights, architecture diagram, and architecture/deployment notes.
+- Deployment readiness
+  - Added Vercel frontend instructions, AWS App Runner/RDS/ElastiCache backend guidance, production environment documentation, and a release checklist.
+- Production hardening
+  - Added environment-driven Django security settings, timestamped console logging, database/cache health checks, and GitHub Actions CI.
 
 ## Current Phase
 
-Deployment readiness.
+Deployment.
 
 Target outcomes:
 
-- Document Vercel frontend deployment and AWS/backend deployment options in more operational detail.
-- Add production environment and release checklist guidance.
+- Deploy the backend first and verify REST, Redis, PostgreSQL, and WebSocket connectivity.
+- Deploy the Next.js frontend to Vercel with the production API and WebSocket URLs.
 
 ## Upcoming Phases
 
-- Production hardening
-  - Add stricter security settings, observability notes, CI workflow guidance, and optional end-to-end browser checks.
+- Post-deployment verification
+  - Run production smoke checks, add uptime monitoring, and consider browser-based end-to-end CI coverage.
 
 ## Working Agreement
 
