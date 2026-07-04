@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Check, Clipboard, Layers3, Loader2, LogOut, MessageSquarePlus, Pencil, RotateCcw, Search, Send, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
+import { Bot, Check, Clipboard, FileText, Layers3, Loader2, LogOut, Menu, MessageSquarePlus, Pencil, RotateCcw, Search, Send, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown-message";
 import { PromptPanel } from "@/components/prompt-panel";
 import { apiFetch } from "@/lib/api";
@@ -27,6 +27,8 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
   const [streamError, setStreamError] = useState("");
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  const [isPromptPanelOpen, setIsPromptPanelOpen] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
   const filteredConversations = conversations.filter((conversation) => conversation.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
@@ -191,6 +193,7 @@ export default function ChatPage() {
     setActiveConversation(conversation);
     setEditingConversationId(null);
     setStreamError("");
+    setIsNavigationOpen(false);
   }
 
   async function createConversation() {
@@ -202,6 +205,7 @@ export default function ChatPage() {
       });
       setConversations((current) => [conversation, ...current]);
       setActiveConversation(conversation);
+      setIsNavigationOpen(false);
     } catch {
       setConversationError("Could not create a new conversation.");
     }
@@ -244,6 +248,7 @@ export default function ChatPage() {
         setActiveConversation(remaining[0] ?? null);
         setMessages([]);
       }
+      setIsNavigationOpen(false);
     } catch {
       setConversationError("Could not delete the conversation.");
     }
@@ -296,8 +301,18 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="grid min-h-screen grid-cols-1 bg-background text-slate-950 lg:grid-cols-[288px_minmax(0,1fr)] xl:grid-cols-[288px_minmax(0,1fr)_336px]">
-      <aside className="flex min-h-0 flex-col border-r border-slate-200 bg-slate-950 text-slate-100">
+    <main className="relative grid min-h-screen grid-cols-1 overflow-hidden bg-background text-slate-950 lg:grid-cols-[288px_minmax(0,1fr)]">
+      <button
+        className={`fixed inset-0 z-40 bg-slate-950/40 transition-opacity lg:hidden ${isNavigationOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        type="button"
+        aria-label="Close chat navigation"
+        onClick={() => setIsNavigationOpen(false)}
+      />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(86vw,288px)] min-h-0 flex-col border-r border-slate-200 bg-slate-950 text-slate-100 shadow-2xl transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:shadow-none ${
+          isNavigationOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
           <div className="flex min-w-0 items-center gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-300/25">
@@ -308,9 +323,14 @@ export default function ChatPage() {
               <div className="text-xs text-slate-400">Enterprise Copilot</div>
             </div>
           </div>
-          <button className="rounded-md p-2 text-slate-400 hover:bg-white/10 hover:text-white" onClick={logout} aria-label="Log out" title="Log out">
-            <LogOut size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button className="rounded-md p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden" onClick={() => setIsNavigationOpen(false)} aria-label="Close chat navigation" title="Close chat navigation">
+              <X size={18} />
+            </button>
+            <button className="rounded-md p-2 text-slate-400 hover:bg-white/10 hover:text-white" onClick={logout} aria-label="Log out" title="Log out">
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
         <div className="p-4">
           <button className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-cyan-500 px-3 text-sm font-semibold text-slate-950 shadow-sm shadow-cyan-950/30 hover:bg-cyan-400" onClick={createConversation}>
@@ -395,14 +415,22 @@ export default function ChatPage() {
 
       <section className="flex min-h-screen min-w-0 flex-col">
         <header className="flex min-h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-5 backdrop-blur">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-              <Layers3 size={14} />
-              Workspace Chat
+          <div className="flex min-w-0 items-center gap-3">
+            <button className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 lg:hidden" type="button" onClick={() => setIsNavigationOpen(true)} aria-label="Open chat navigation" title="Open chat navigation">
+              <Menu size={18} />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                <Layers3 size={14} />
+                Workspace Chat
+              </div>
+              <h1 className="truncate text-base font-semibold text-slate-950">{activeConversation?.title ?? "No conversation selected"}</h1>
             </div>
-            <h1 className="truncate text-base font-semibold text-slate-950">{activeConversation?.title ?? "No conversation selected"}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <button className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50" type="button" onClick={() => setIsPromptPanelOpen(true)} aria-label="Open prompt library" title="Open prompt library">
+              <FileText size={17} />
+            </button>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
                 socketStatus === "ready"
@@ -511,6 +539,8 @@ export default function ChatPage() {
 
       <PromptPanel
         activeConversationId={activeConversation?.id}
+        isOpen={isPromptPanelOpen}
+        onClose={() => setIsPromptPanelOpen(false)}
         onPromptApplied={(message) => {
           if (activeConversation) {
             setMessages((current) => [...current, message]);

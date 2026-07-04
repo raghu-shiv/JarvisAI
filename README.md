@@ -12,11 +12,15 @@ The default local mode uses the mock provider, so the full product can be review
 
 ![JarvisAI chat workspace](docs/assets/screenshots/chat-workspace.png)
 
-![JarvisAI assistant response](docs/assets/screenshots/assistant-response.png)
+![JarvisAI assistant response](docs/assets/screenshots/prompt-library.png)
 
-![JarvisAI prompt library](docs/assets/screenshots/prompt-library.png)
+![JarvisAI prompt library](docs/assets/screenshots/prompt-applied.png)
 
-![JarvisAI mobile chat view](docs/assets/screenshots/mobile-chat.png)
+![JarvisAI mobile chat view](docs/assets/screenshots/mobile-view.png)
+
+![JarvisAI mobile chat view](docs/assets/screenshots/chat-panel.png)
+
+![JarvisAI mobile chat view](docs/assets/screenshots/prompt-library-mobile-view.png)
 
 ## Product Highlights
 
