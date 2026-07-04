@@ -2,9 +2,9 @@
 
 JarvisAI is an enterprise-style AI chat platform built with Next.js, Django REST Framework, Django Channels, Redis, PostgreSQL, and Docker.
 
-This repository is designed as a flagship full-stack project: it demonstrates authenticated AI chat, persisted conversation history, WebSocket streaming, reusable prompt templates, Redis-backed operational behavior, and provider abstraction for mock or OpenAI-backed responses.
+This repository is designed as a flagship full-stack project: it demonstrates authenticated AI chat, persisted conversation history, WebSocket streaming, reusable prompt templates, Redis-backed operational behavior, and provider abstraction for mock, OpenAI-backed, or OpenRouter-backed responses.
 
-The default local mode uses the mock provider, so the full product can be reviewed without paid AI credentials.
+The default local mode uses the mock provider, so the full product can be reviewed without paid AI credentials. OpenRouter can also be selected with the configured free model IDs.
 
 ## Screenshots
 
@@ -22,10 +22,10 @@ The default local mode uses the mock provider, so the full product can be review
 
 - Secure workspace access with JWT login, refresh, logout, and blacklist support
 - Enterprise chat workspace with conversation history, rename, archive, search, markdown rendering, and copy actions
-- WebSocket streaming through Django Channels with connection status, failed-state handling, provider metadata, and rate limiting
+- WebSocket streaming through Django Channels with connection status, failed-state handling, provider metadata, and conditional rate limiting
 - Prompt template library with create, edit, delete, and apply-to-conversation workflows
 - Redis-backed caching for conversation and prompt list performance
-- Mock AI provider for demos plus OpenAI provider configuration for real completions
+- Mock AI provider for demos plus OpenAI and OpenRouter provider configuration for real completions
 - Fast local test suite that runs without Docker, PostgreSQL, Redis, or paid AI keys
 
 ## Current Status
@@ -47,9 +47,10 @@ Implemented:
 - Prompt template CRUD UI
 - Apply prompt templates to conversations as persisted system messages
 - Redis-backed conversation and prompt ID-list caching
-- Per-user WebSocket chat request throttling
+- Per-user WebSocket chat request throttling for non-free providers
 - Mock AI provider for local demos without paid keys
 - OpenAI provider foundation with configurable model, temperature, max tokens, and timeout
+- OpenRouter provider with configured free model IDs including `liquid/lfm-2.5-1.2b-instruct:free`
 - Assistant message provider/model metadata persistence
 - Sanitized AI provider errors
 - Focused backend API and provider tests
@@ -75,10 +76,11 @@ flowchart LR
     API --> Postgres["PostgreSQL"]
     Channels --> Postgres
     API --> Redis["Redis cache"]
-    Channels --> RedisLayer["Redis channel layer + rate limits"]
+    Channels --> RedisLayer["Redis channel layer + conditional rate limits"]
     Channels --> Provider["AI provider layer"]
     Provider --> Mock["Mock provider"]
     Provider --> OpenAI["OpenAI provider"]
+    Provider --> OpenRouter["OpenRouter provider"]
 ```
 
 More detail is available in [docs/ARCHITECTURE_DEPLOYMENT.md](docs/ARCHITECTURE_DEPLOYMENT.md).
@@ -112,6 +114,7 @@ AI:
 
 - Mock provider for local development and demos
 - OpenAI provider for real completions
+- OpenRouter provider for the configured free models
 - Configurable provider/model settings through environment variables
 
 ## Local Setup
@@ -139,7 +142,7 @@ Open:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000/api
 
-By default `AI_PROVIDER=mock`, so the app works locally without an OpenAI API key.
+By default `AI_PROVIDER=mock`, so the app works locally without provider API keys.
 
 ## Demo Workflow
 
@@ -187,6 +190,14 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_TEMPERATURE=0.7
 OPENAI_MAX_TOKENS=0
 OPENAI_TIMEOUT_SECONDS=30
+OPENROUTER_API_KEY=
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free
+OPENROUTER_TEMPERATURE=0.7
+OPENROUTER_MAX_TOKENS=0
+OPENROUTER_TIMEOUT_SECONDS=30
+OPENROUTER_HTTP_REFERER=http://localhost:3000
+OPENROUTER_APP_TITLE=JarvisAI
 ```
 
 Rate-limit variables:
@@ -196,7 +207,15 @@ CHAT_RATE_LIMIT_COUNT=20
 CHAT_RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
-Use `AI_PROVIDER=openai` only when `OPENAI_API_KEY` is configured in your local or deployment environment.
+Use `AI_PROVIDER=openai` only when `OPENAI_API_KEY` is configured in your local or deployment environment. Use `AI_PROVIDER=openrouter` only when `OPENROUTER_API_KEY` is configured. The OpenRouter provider accepts these configured free model IDs:
+
+```text
+liquid/lfm-2.5-1.2b-instruct:free
+qwen/qwen3-next-80b-a3b-instruct:free
+openai/gpt-oss-120b:free
+```
+
+OpenRouter uses the OpenAI-compatible `POST /api/v1/chat/completions` API with streaming enabled and optional app attribution headers. OpenRouter free models may still return provider-side `429` rate limits even though JarvisAI does not apply its own chat throttle to the OpenRouter provider.
 
 ## API Overview
 
@@ -273,7 +292,7 @@ Redis is used for:
 - Django cache backend
 - Per-user conversation ID-list caching
 - Per-user prompt ID-list caching
-- Per-user WebSocket chat request throttling
+- Per-user WebSocket chat request throttling for mock and OpenAI providers
 
 Message contents are persisted in PostgreSQL and are not cached as a Redis optimization.
 
@@ -309,6 +328,10 @@ docker compose logs frontend
 docker compose logs redis
 ```
 
+WebSocket troubleshooting:
+
+- If chat connects and then disconnects after about 5 seconds with server close code `1011`, check backend logs for `Timeout reading from redis`. JarvisAI pins `redis<8.0` because `channels-redis` 4.3 can hit idle blocking-read timeouts with newer Redis Python clients.
+
 ## Project Governance
 
 - `AGENTS.md` defines AI-agent operating rules for this repository.
@@ -322,4 +345,4 @@ docker compose logs redis
 - `.env` is ignored by git.
 - `.env.example` documents required variables and uses development-safe placeholders.
 - Never commit API keys, tokens, database dumps, virtual environments, `node_modules`, or build output.
-- Keep `AI_PROVIDER=mock` for demos and local development without paid provider keys.
+- Keep `AI_PROVIDER=mock` for demos and local development without provider keys, or use `AI_PROVIDER=openrouter` with one of the configured free OpenRouter models.

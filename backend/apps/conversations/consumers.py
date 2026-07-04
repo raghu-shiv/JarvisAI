@@ -36,7 +36,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "error", "error": "Message content is required."})
             return
 
-        if await self._is_rate_limited():
+        try:
+            provider = get_ai_provider()
+        except AIProviderError as exc:
+            await self.send_json({"type": "assistant.failed", "error": exc.message})
+            return
+
+        if provider.provider_name != "openrouter" and await self._is_rate_limited():
             await self.send_json(
                 {
                     "type": "rate_limited",
@@ -44,12 +50,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     "retry_after_seconds": settings.CHAT_RATE_LIMIT_WINDOW_SECONDS,
                 }
             )
-            return
-
-        try:
-            provider = get_ai_provider()
-        except AIProviderError as exc:
-            await self.send_json({"type": "assistant.failed", "error": exc.message})
             return
 
         await self._save_message(role=Message.Role.USER, content=text, status=Message.Status.COMPLETED)

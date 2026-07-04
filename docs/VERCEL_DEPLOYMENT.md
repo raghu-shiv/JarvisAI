@@ -44,7 +44,7 @@ NEXT_PUBLIC_API_BASE_URL=https://<backend-host>/api
 NEXT_PUBLIC_WS_BASE_URL=wss://<backend-host>/ws
 ```
 
-Do not add database passwords, Redis URLs, Django secrets, or OpenAI keys to Vercel. Those belong to the backend environment.
+Do not add database passwords, Redis URLs, Django secrets, OpenAI keys, or OpenRouter keys to Vercel. Those belong to the backend environment.
 
 ## Backend Allowlist
 

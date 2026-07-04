@@ -18,6 +18,7 @@ flowchart TD
     WS --> AI["AI provider interface"]
     AI --> Mock["Mock provider for demos"]
     AI --> OpenAI["OpenAI provider for production use"]
+    AI --> OpenRouter["OpenRouter provider for configured free models"]
 ```
 
 ## Runtime Responsibilities
@@ -26,8 +27,8 @@ flowchart TD
 - Django REST Framework handles account, conversation, message, and prompt APIs.
 - Django Channels streams assistant responses over WebSockets and persists user/assistant messages.
 - PostgreSQL stores users, refresh-token blacklist data, conversations, messages, and prompt templates.
-- Redis backs the Channels layer, cached ID lists, and per-user chat throttling.
-- The AI provider layer keeps local demos free through `AI_PROVIDER=mock` and enables real completions with `AI_PROVIDER=openai`.
+- Redis backs the Channels layer, cached ID lists, and per-user chat throttling for non-free providers.
+- The AI provider layer keeps local demos free through `AI_PROVIDER=mock`, enables direct OpenAI completions with `AI_PROVIDER=openai`, and supports OpenRouter free models with `AI_PROVIDER=openrouter`.
 
 ## Deployment Shape
 
@@ -99,15 +100,25 @@ POSTGRES_PASSWORD=<database-password>
 POSTGRES_HOST=<database-host>
 POSTGRES_PORT=5432
 REDIS_URL=<redis-url>
-AI_PROVIDER=mock|openai
+AI_PROVIDER=mock|openai|openrouter
 OPENAI_API_KEY=<only-when-openai-is-selected>
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_TEMPERATURE=0.7
 OPENAI_MAX_TOKENS=0
 OPENAI_TIMEOUT_SECONDS=30
+OPENROUTER_API_KEY=<only-when-openrouter-is-selected>
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free
+OPENROUTER_TEMPERATURE=0.7
+OPENROUTER_MAX_TOKENS=0
+OPENROUTER_TIMEOUT_SECONDS=30
+OPENROUTER_HTTP_REFERER=https://<frontend-host>
+OPENROUTER_APP_TITLE=JarvisAI
 CHAT_RATE_LIMIT_COUNT=20
 CHAT_RATE_LIMIT_WINDOW_SECONDS=60
 ```
+
+Supported OpenRouter free models include `liquid/lfm-2.5-1.2b-instruct:free`, `qwen/qwen3-next-80b-a3b-instruct:free`, and `openai/gpt-oss-120b:free`. Because the configured OpenRouter models are free, JarvisAI does not apply its own WebSocket chat rate limit when `AI_PROVIDER=openrouter`. OpenRouter can still apply provider-side free-model quotas.
 
 Frontend:
 
@@ -154,8 +165,8 @@ WS   wss://<backend-host>/ws/chat/<conversation-id>/?token=<access-token>
 - Run migrations using the production database configuration.
 - Verify `/api/health/` returns database and cache status as `ok`.
 - Confirm WebSocket streaming through the deployed frontend.
-- Start with `AI_PROVIDER=mock`; switch to `openai` only after secret storage is configured.
-- Keep `OPENAI_API_KEY` in the backend secret store only.
+- Start with `AI_PROVIDER=mock`; switch to `openai` or `openrouter` only after secret storage is configured.
+- Keep `OPENAI_API_KEY` and `OPENROUTER_API_KEY` in the backend secret store only.
 - Review console logs for errors after the first production session.
 
 ## Observability Notes

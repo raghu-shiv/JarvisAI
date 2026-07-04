@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, Check, Clipboard, Layers3, Loader2, LogOut, MessageSquarePlus, Pencil, RotateCcw, Search, Send, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown-message";
 import { PromptPanel } from "@/components/prompt-panel";
@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
   const [streamError, setStreamError] = useState("");
+  const socketRef = useRef<WebSocket | null>(null);
 
   const filteredConversations = conversations.filter((conversation) => conversation.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
   const connectionLabel =
@@ -40,13 +41,7 @@ export default function ChatPage() {
             ? "Disconnected"
             : "Idle";
 
-  const socket = useMemo(() => {
-    if (!activeConversation?.id) return null;
-    const token = getAccessToken();
-    if (!token) return null;
-    return createChatSocket(activeConversation.id, token);
-  }, [activeConversation?.id]);
-  const canSendMessage = Boolean(activeConversation && socket && socketStatus === "ready" && !isStreaming && !isLoadingMessages && draft.trim());
+  const canSendMessage = Boolean(activeConversation && socketStatus === "ready" && !isStreaming && !isLoadingMessages && draft.trim());
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -62,11 +57,22 @@ export default function ChatPage() {
   }, [activeConversation]);
 
   useEffect(() => {
-    if (!socket) {
-      setSocketStatus(activeConversation ? "connecting" : "idle");
+    if (!activeConversation?.id) {
+      socketRef.current = null;
+      setSocketStatus("idle");
       return;
     }
 
+    const token = getAccessToken();
+    if (!token) {
+      socketRef.current = null;
+      setSocketStatus("error");
+      setStreamError("You need to sign in again before chatting.");
+      return;
+    }
+
+    const socket = createChatSocket(activeConversation.id, token);
+    socketRef.current = socket;
     setSocketStatus("connecting");
     setStreamError("");
 
@@ -136,15 +142,21 @@ export default function ChatPage() {
     };
 
     socket.onclose = () => {
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
       setSocketStatus((current) => (current === "error" ? "error" : "closed"));
       setIsStreaming(false);
     };
 
     return () => {
       socket.onclose = null;
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
       socket.close();
     };
-  }, [activeConversation?.id, socket]);
+  }, [activeConversation?.id]);
 
   async function loadConversations() {
     setIsLoadingConversations(true);
@@ -239,7 +251,13 @@ export default function ChatPage() {
 
   function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const socket = socketRef.current;
     if (!canSendMessage || !socket || !activeConversation) return;
+    if (socket.readyState !== WebSocket.OPEN) {
+      setSocketStatus("closed");
+      setStreamError("The chat connection is not open. Select the conversation again and retry.");
+      return;
+    }
 
     const message: Message = {
       id: crypto.randomUUID(),
@@ -399,7 +417,7 @@ export default function ChatPage() {
             </span>
             <span className="hidden items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 sm:inline-flex">
               <ShieldCheck size={13} />
-              Mock provider
+              AI provider
             </span>
           </div>
         </header>

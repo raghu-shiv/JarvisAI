@@ -23,6 +23,8 @@ This file tracks the JarvisAI build roadmap and the current project direction.
   - Added explicit Redis cache keys, cached conversation/prompt ID lists, cache invalidation on mutations, and per-user WebSocket chat throttling.
 - OpenAI provider hardening
   - Added provider metadata, configurable model/temperature/token/timeout settings, sanitized provider errors, mock provider parity, and assistant provider/model persistence.
+- OpenRouter provider
+  - Added OpenRouter-backed streaming for the configured free models, environment-driven attribution settings, model validation, and no JarvisAI chat throttling while the free OpenRouter provider is selected.
 - Tests
   - Added Django test settings for local in-memory database/cache/channel layer usage.
   - Added focused backend tests for auth, prompts, conversations, prompt application, mock provider streaming, and provider configuration errors.
